@@ -74,5 +74,4 @@ typings/
 .env
 .env.test
 
-dist/
 lib/
