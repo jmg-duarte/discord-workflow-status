@@ -93,7 +93,7 @@ async function run(): Promise<void> {
                 {
                   name: "Repository",
                   value: `[${context.repo.owner}/${context.repo.repo}](https://github.com/${context.repo.owner}/${context.repo.repo})`,
-                  inline: false
+                  inline: true
                 },
                 {
                   name: "Ref",
@@ -110,14 +110,16 @@ async function run(): Promise<void> {
           ]
         }
 
-        if (workflowStatus !== "Failure") {
-          finishedJobs.forEach(job => {
-            payload.embeds[0].fields.push({
-              name: job.name,
-              value: `[\`${job.status}\`](${job.url})`,
-              inline: false
-            })
-          })
+        if (workflowStatus !== "Success") {
+          for (const job of finishedJobs) {
+            if (job.status !== "Success") {
+              payload.embeds[0].fields.push({
+                name: job.name,
+                value: `[\`${job.status}\`](${job.url})`,
+                inline: false
+              })
+            }
+          }
         }
 
         notify(discordWebhook, payload)
