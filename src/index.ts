@@ -1,8 +1,9 @@
+import * as https from "https"
+
 import * as core from '@actions/core'
 import * as GitHub from '@actions/github'
 
-import executeWebhook from './helpers/discord'
-import DiscordWebhook, { EmbedField } from './helpers/discordTypes'
+import DiscordWebhook, { EmbedField } from './types'
 
 type JobData = {
   name: string
@@ -11,10 +12,6 @@ type JobData = {
 }
 
 const { GITHUB_RUN_ID, GITHUB_WORKFLOW } = process.env
-
-function wordToUpperCase(word: string): string {
-  return word[0].toUpperCase() + word.substring(1, word.length).toLowerCase()
-}
 
 function workflowStatusFromJobs(jobs: JobData[]): 'Success' | 'Failure' | 'Cancelled' {
   let statuses = jobs.map(j => j.status)
@@ -101,14 +98,22 @@ async function run(): Promise<void> {
           payload.embeds[0].fields = fields
         }
 
-        executeWebhook(payload, discordWebhook)
+        const request = https.request(discordWebhook, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          }
+        })
+        request.write(JSON.stringify(payload))
+        core.debug(JSON.stringify(payload))
+        request.end()
       })
       .catch(error => {
         core.setFailed(error.message)
       })
     }
   } catch (error) {
-    core.setFailed(error.message)
+    core.setFailed((error as any).message)
   }
 }
 
