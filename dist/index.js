@@ -44,90 +44,93 @@ const core = __importStar(__nccwpck_require__(2186));
 const GitHub = __importStar(__nccwpck_require__(5438));
 const { GITHUB_RUN_ID, GITHUB_WORKFLOW } = process.env;
 function workflowStatusFromJobs(jobs) {
-    let statuses = jobs.map(j => j.status);
-    if (statuses.includes('cancelled')) {
-        return 'Cancelled';
+    for (let job of jobs) {
+        if (job.status === "cancelled") {
+            return "Cancelled";
+        }
+        else if (job.status === "failure") {
+            return "Failure";
+        }
     }
-    if (statuses.includes('failure')) {
-        return 'Failure';
-    }
-    return 'Success';
+    return "Success";
+}
+// FIXME: the payload type is wrong, it should be something like WebhookWithEmbed
+function notify(webhook, payload) {
+    const request = https.request(webhook, {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json"
+        }
+    });
+    request.write(JSON.stringify(payload));
+    request.end();
+    core.debug(JSON.stringify(payload));
 }
 function run() {
     return __awaiter(this, void 0, void 0, function* () {
+        if (GITHUB_RUN_ID == undefined) {
+            core.setFailed('Unable to locate the current run id... Something is very wrong');
+            return;
+        }
         try {
-            if (GITHUB_RUN_ID == undefined) {
-                core.setFailed('Unable to locate the current run id... Something is very wrong');
-            }
-            else {
-                const githubToken = core.getInput('github-token', { required: true });
-                const discordWebhook = core.getInput('discord-webhook', { required: true });
-                const username = core.getInput('username');
-                const avatarURL = core.getInput('avatar-url');
-                const includeDetails = core.getInput('include-details').trim().toLowerCase() === 'true' || false;
-                const colorSuccess = parseInt(core.getInput('color-success').trim().replace(/^#/g, ''), 16);
-                const colorFailure = parseInt(core.getInput('color-failure').trim().replace(/^#/g, ''), 16);
-                const colorCancelled = parseInt(core.getInput('color-cancelled').trim().replace(/^#/g, ''), 16);
-                const inputTitle = core.getInput('title');
-                const inputDescription = core.getInput('description');
-                core.setSecret(githubToken);
-                core.setSecret(discordWebhook);
-                const octokit = GitHub.getOctokit(githubToken);
-                const context = GitHub.context;
-                octokit.actions.listJobsForWorkflowRun({
-                    owner: context.repo.owner,
-                    repo: context.repo.repo,
-                    run_id: parseInt(GITHUB_RUN_ID, 10)
-                })
-                    .then(response => {
-                    let workflowJobs = response.data.jobs;
-                    let jobData = workflowJobs
-                        .filter(j => j.status === 'completed')
-                        .map(j => ({ name: j.name, status: j.conclusion, url: j.html_url }));
-                    let workflowStatus = workflowStatusFromJobs(jobData);
-                    let color = workflowStatus === 'Success' ? colorSuccess : (workflowStatus === 'Failure' ? colorFailure : colorCancelled);
-                    let payload = {
-                        username: username,
-                        avatar_url: avatarURL,
-                        embeds: [
-                            {
-                                author: {
-                                    name: context.actor,
-                                    url: `https://github.com/${context.actor}`,
-                                    icon_url: `https://github.com/${context.actor}.png`
-                                },
-                                title: inputTitle.replace('{{STATUS}}', workflowStatus) || `[${context.repo.owner}/${context.repo.repo}] ${GITHUB_WORKFLOW}: ${workflowStatus}`,
-                                url: `https://github.com/${context.repo.owner}/${context.repo.repo}/actions/runs/${GITHUB_RUN_ID}`,
-                                description: inputDescription.replace('{{STATUS}}', workflowStatus) || undefined,
-                                color: color
-                            }
-                        ]
-                    };
-                    if (includeDetails) {
-                        let fields = [];
-                        jobData.forEach(jd => {
-                            fields.push({
-                                name: jd.name,
-                                value: `[\`${jd.status}\`](${jd.url})`,
-                                inline: true
-                            });
-                        });
-                        payload.embeds[0].fields = fields;
+            const githubToken = core.getInput('github-token', { required: true });
+            const discordWebhook = core.getInput('discord-webhook', { required: true });
+            const username = core.getInput('username');
+            const avatarURL = core.getInput('avatar-url');
+            const colors = {
+                "Success": 0x17cf48,
+                "Cancelled": 0xd3d3d3,
+                "Failure": 0xe72727
+            };
+            core.setSecret(githubToken);
+            core.setSecret(discordWebhook);
+            const octokit = GitHub.getOctokit(githubToken);
+            const context = GitHub.context;
+            octokit.actions.listJobsForWorkflowRun({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                run_id: parseInt(GITHUB_RUN_ID, 10)
+            })
+                .then(response => {
+                let finishedJobs = [];
+                for (const job of response.data.jobs) {
+                    if (job.status === "completed") {
+                        finishedJobs.push({ name: job.name, status: job.conclusion, url: job.html_url });
                     }
-                    const request = https.request(discordWebhook, {
-                        method: "POST",
-                        headers: {
-                            "Content-Type": "application/json"
+                }
+                let workflowStatus = workflowStatusFromJobs(finishedJobs);
+                let payload = {
+                    username: username,
+                    avatar_url: avatarURL,
+                    embeds: [
+                        {
+                            author: {
+                                name: context.actor,
+                                url: `https://github.com/${context.actor}`,
+                                icon_url: `https://github.com/${context.actor}.png`
+                            },
+                            title: `[${context.repo.owner}/${context.repo.repo}@${context.sha}] ${GITHUB_WORKFLOW}: ${workflowStatus}`,
+                            url: `https://github.com/${context.repo.owner}/${context.repo.repo}/actions/runs/${GITHUB_RUN_ID}`,
+                            color: colors[workflowStatus]
                         }
+                    ]
+                };
+                if (workflowStatus !== "Failure") {
+                    let fields = [];
+                    finishedJobs.forEach(job => {
+                        fields.push({
+                            name: job.name,
+                            value: `[\`${job.status}\`](${job.url})`,
+                            inline: false
+                        });
                     });
-                    request.write(JSON.stringify(payload));
-                    core.debug(JSON.stringify(payload));
-                    request.end();
-                })
-                    .catch(error => {
-                    core.setFailed(error.message);
-                });
-            }
+                    payload.embeds[0].fields = fields;
+                }
+                notify(discordWebhook, payload);
+            })
+                .catch(error => {
+                core.setFailed(error.message);
+            });
         }
         catch (error) {
             core.setFailed(error.message);

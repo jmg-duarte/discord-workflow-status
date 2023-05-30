@@ -14,57 +14,67 @@ type JobData = {
 const { GITHUB_RUN_ID, GITHUB_WORKFLOW } = process.env
 
 function workflowStatusFromJobs(jobs: JobData[]): 'Success' | 'Failure' | 'Cancelled' {
-  let statuses = jobs.map(j => j.status)
-
-  if (statuses.includes('cancelled')) {
-    return 'Cancelled'
+  for (let job of jobs) {
+    if (job.status === "cancelled") {
+      return "Cancelled"
+    } else if (job.status === "failure") {
+      return "Failure"
+    }
   }
-
-  if (statuses.includes('failure')) {
-    return 'Failure'
-  }
-
-  return 'Success'
+  return "Success"
 }
 
+// FIXME: the payload type is wrong, it should be something like WebhookWithEmbed
+function notify(webhook: string, payload: object) {
+  const request = https.request(webhook, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json"
+    }
+  })
+  request.write(JSON.stringify(payload))
+  request.end()
+  core.debug(JSON.stringify(payload))
+}
+
+
 async function run(): Promise<void> {
+  if (GITHUB_RUN_ID == undefined) {
+    core.setFailed('Unable to locate the current run id... Something is very wrong')
+    return
+  }
+
   try {
-    if (GITHUB_RUN_ID == undefined) {
-      core.setFailed('Unable to locate the current run id... Something is very wrong')
-    } else {
-      const githubToken = core.getInput('github-token', { required: true })
-      const discordWebhook = core.getInput('discord-webhook', { required: true })
-      const username = core.getInput('username')
-      const avatarURL = core.getInput('avatar-url')
-      const includeDetails = core.getInput('include-details').trim().toLowerCase() === 'true' || false
-      const colorSuccess = parseInt(core.getInput('color-success').trim().replace(/^#/g, ''), 16)
-      const colorFailure = parseInt(core.getInput('color-failure').trim().replace(/^#/g, ''), 16)
-      const colorCancelled = parseInt(core.getInput('color-cancelled').trim().replace(/^#/g, ''), 16)
+    const githubToken = core.getInput('github-token', { required: true })
+    const discordWebhook = core.getInput('discord-webhook', { required: true })
+    const username = core.getInput('username')
+    const avatarURL = core.getInput('avatar-url')
 
-      const inputTitle = core.getInput('title')
-      const inputDescription = core.getInput('description')
+    const colors = {
+      "Success": 0x17cf48,
+      "Cancelled": 0xd3d3d3,
+      "Failure": 0xe72727
+    }
 
-      core.setSecret(githubToken)
-      core.setSecret(discordWebhook)
+    core.setSecret(githubToken)
+    core.setSecret(discordWebhook)
 
-      const octokit = GitHub.getOctokit(githubToken)
-      const context = GitHub.context
+    const octokit = GitHub.getOctokit(githubToken)
+    const context = GitHub.context
 
-      octokit.actions.listJobsForWorkflowRun({
-        owner: context.repo.owner,
-        repo: context.repo.repo,
-        run_id: parseInt(GITHUB_RUN_ID, 10)
-      })
+    octokit.actions.listJobsForWorkflowRun({
+      owner: context.repo.owner,
+      repo: context.repo.repo,
+      run_id: parseInt(GITHUB_RUN_ID, 10)
+    })
       .then(response => {
-        let workflowJobs = response.data.jobs
-
-        let jobData: JobData[] = workflowJobs
-                                  .filter(j => j.status === 'completed')
-                                  .map(j => ({ name: j.name, status: j.conclusion, url: j.html_url }))
-
-        let workflowStatus = workflowStatusFromJobs(jobData)
-
-        let color = workflowStatus === 'Success' ? colorSuccess : (workflowStatus === 'Failure' ? colorFailure : colorCancelled)
+        let finishedJobs = []
+        for (const job of response.data.jobs) {
+          if (job.status === "completed") {
+            finishedJobs.push({ name: job.name, status: job.conclusion, url: job.html_url })
+          }
+        }
+        let workflowStatus = workflowStatusFromJobs(finishedJobs)
 
         let payload: DiscordWebhook = {
           username: username,
@@ -76,45 +86,38 @@ async function run(): Promise<void> {
                 url: `https://github.com/${context.actor}`,
                 icon_url: `https://github.com/${context.actor}.png`
               },
-              title: inputTitle.replace('{{STATUS}}', workflowStatus) || `[${context.repo.owner}/${context.repo.repo}] ${GITHUB_WORKFLOW}: ${workflowStatus}`,
+              title: `[${context.repo.owner}/${context.repo.repo}@${context.sha}] ${GITHUB_WORKFLOW}: ${workflowStatus}`,
               url: `https://github.com/${context.repo.owner}/${context.repo.repo}/actions/runs/${GITHUB_RUN_ID}`,
-              description: inputDescription.replace('{{STATUS}}', workflowStatus) || undefined,
-              color: color
+              color: colors[workflowStatus]
             }
           ]
         }
 
-        if (includeDetails) {
+        if (workflowStatus !== "Failure") {
           let fields: EmbedField[] = []
 
-          jobData.forEach(jd => {
+          finishedJobs.forEach(job => {
             fields.push({
-              name: jd.name,
-              value: `[\`${jd.status}\`](${jd.url})`,
-              inline: true
+              name: job.name,
+              value: `[\`${job.status}\`](${job.url})`,
+              inline: false
             })
           })
 
           payload.embeds[0].fields = fields
         }
 
-        const request = https.request(discordWebhook, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json"
-          }
-        })
-        request.write(JSON.stringify(payload))
-        core.debug(JSON.stringify(payload))
-        request.end()
+        notify(discordWebhook, payload)
+
       })
       .catch(error => {
         core.setFailed(error.message)
       })
-    }
+
   } catch (error) {
     core.setFailed((error as any).message)
   }
+
 }
 
 run()

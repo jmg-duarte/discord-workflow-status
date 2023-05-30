@@ -1,3 +1,4 @@
+// FIXME: make this simpler
 export interface EmbedAuthor {
   name?: string
   url?: string

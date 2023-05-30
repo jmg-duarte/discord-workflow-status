@@ -21,34 +21,6 @@ inputs:
     required: false
     default: 'https://avatars0.githubusercontent.com/u/44036562?s=200&v=4'
 
-  title:
-    description: 'Overrides the default title. Include the status in the title by adding the {{STATUS}} placeholder.'
-    required: false
-
-  description:
-    description: 'The message to display. Include the status in the description by adding the {{STATUS}} placeholder'
-    required: false
-
-  include-details:
-    description: 'Whether or not to include the individual job status breakdown of the Workflow run'
-    required: false
-    default: 'true'
-
-  color-success:
-    description: 'Overrides the default success color. Any valid hex-color-code. E.g. #17cf48, 17cf48, 0x17cf48'
-    required: false
-    default: '17cf48'
-
-  color-failure:
-    description: 'Overrides the default failure color. Any valid hex-color-code. E.g. #17cf48, 17cf48, 0x17cf48'
-    required: false
-    default: 'e72727'
-
-  color-cancelled:
-    description: 'Overrides the default cancelled color. Any valid hex-color-code. E.g. #17cf48, 17cf48, 0x17cf48'
-    required: false
-    default: 'd3d3d3'
-
 runs:
   using: 'node16'
   main: 'dist/index.js'
