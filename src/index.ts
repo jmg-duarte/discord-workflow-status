@@ -3,8 +3,6 @@ import * as https from "https"
 import * as core from '@actions/core'
 import * as GitHub from '@actions/github'
 
-import DiscordWebhook, { EmbedField } from './types'
-
 type JobData = {
   name: string
   status: string | null
@@ -76,7 +74,9 @@ async function run(): Promise<void> {
         }
         let workflowStatus = workflowStatusFromJobs(finishedJobs)
 
-        let payload: DiscordWebhook = {
+        // FIXME: the payload is untyped because I removed the existing typing
+        // it was unnecessarily complex
+        let payload = {
           username: username,
           avatar_url: avatarURL,
           embeds: [
@@ -86,25 +86,38 @@ async function run(): Promise<void> {
                 url: `https://github.com/${context.actor}`,
                 icon_url: `https://github.com/${context.actor}.png`
               },
-              title: `[${context.repo.owner}/${context.repo.repo}@${context.sha}] ${GITHUB_WORKFLOW}: ${workflowStatus}`,
+              color: colors[workflowStatus],
+              title: `${GITHUB_WORKFLOW}: ${workflowStatus}`,
               url: `https://github.com/${context.repo.owner}/${context.repo.repo}/actions/runs/${GITHUB_RUN_ID}`,
-              color: colors[workflowStatus]
+              fields: [
+                {
+                  name: "Repository",
+                  value: `[${context.repo.owner}/${context.repo.repo}](https://github.com/${context.repo.owner}/${context.repo.repo})`,
+                  inline: false
+                },
+                {
+                  name: "Ref",
+                  value: context.ref,
+                  inline: true
+                },
+                {
+                  name: "Commit",
+                  value: context.sha.substring(0, 8),
+                  inline: true
+                }
+              ]
             }
           ]
         }
 
         if (workflowStatus !== "Failure") {
-          let fields: EmbedField[] = []
-
           finishedJobs.forEach(job => {
-            fields.push({
+            payload.embeds[0].fields.push({
               name: job.name,
               value: `[\`${job.status}\`](${job.url})`,
               inline: false
             })
           })
-
-          payload.embeds[0].fields = fields
         }
 
         notify(discordWebhook, payload)
