@@ -1,5 +1,5 @@
-name: 'Discord Workflow Status Notifier'
-description: 'A GitHub action to report workflow and job status to a Discord Webhook'
+name: 'Discord Workflow Status Action'
+description: 'GitHub Action to notify Discord of workflow statuses'
 author: 'José Duarte'
 
 inputs:
@@ -8,7 +8,7 @@ inputs:
     required: true
 
   discord-webhook:
-    description: 'The WebHook URL to call. Should be stored in Secrets on the Repository'
+    description: 'Discord Webhook URL'
     required: true
 
   username:

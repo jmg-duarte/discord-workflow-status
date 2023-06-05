@@ -1,4 +1,4 @@
-# GitHub Actions Workflow Notifier
+# Discord Workflow Status Action
 
 Notify Discord of workflow statuses 🤖
 
