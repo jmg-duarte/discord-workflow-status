@@ -35,6 +35,6 @@ jobs:
       - name: Notify
         uses: jmg-duarte/workflow-notify-discord@v1
         with:
-          github-token: ${{ secrets.github_token }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
           discord-webhook: ${{ secrets.DISCORD_WEBHOOK }}
 ```

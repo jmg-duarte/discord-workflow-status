@@ -2,6 +2,7 @@ import * as https from "https"
 
 import * as core from '@actions/core'
 import * as GitHub from '@actions/github'
+import { WebhookPayload } from "@actions/github/lib/interfaces"
 
 type JobData = {
   name: string
@@ -32,9 +33,25 @@ function notify(webhook: string, payload: object) {
   })
   request.write(JSON.stringify(payload))
   request.end()
-  core.debug(JSON.stringify(payload))
 }
 
+function getBody(payload: WebhookPayload) {
+  // NOTE: The title property is "stolen" from the actual JSON, it's not actually part of the type
+  if (payload.hasOwnProperty("pull_request")) {
+    const title = payload.pull_request?.title
+    const number = payload.pull_request?.number
+    const url = payload.pull_request?.html_url
+    return `[${title} (${number})](${url})`
+  } else if (payload.hasOwnProperty("issue")) {
+    const title = payload.issue?.title
+    const number = payload.issue?.number
+    const url = payload.issue?.html_url
+    return `[${title} (${number})](${url})`
+  } else {
+    // FIXME: figure out if we should support this case
+    return ""
+  }
+}
 
 async function run(): Promise<void> {
   if (GITHUB_RUN_ID == undefined) {
@@ -76,6 +93,7 @@ async function run(): Promise<void> {
 
         // FIXME: the payload is untyped because I removed the existing typing
         // it was unnecessarily complex
+        // FIXME: Could the payload use the builder pattern for typechecking and readability??
         let payload = {
           username: username,
           avatar_url: avatarURL,
@@ -87,8 +105,9 @@ async function run(): Promise<void> {
                 icon_url: `https://github.com/${context.actor}.png`
               },
               color: colors[workflowStatus],
-              title: `${GITHUB_WORKFLOW}: ${workflowStatus}`,
+              title: `${GITHUB_WORKFLOW} - ${workflowStatus}`,
               url: `https://github.com/${context.repo.owner}/${context.repo.repo}/actions/runs/${GITHUB_RUN_ID}`,
+              description: getBody(context.payload),
               fields: [
                 {
                   name: "Repository",
@@ -96,7 +115,7 @@ async function run(): Promise<void> {
                   inline: true
                 },
                 {
-                  name: "Ref",
+                  name: "Reference",
                   value: context.ref,
                   inline: true
                 },
@@ -112,7 +131,7 @@ async function run(): Promise<void> {
 
         if (workflowStatus !== "Success") {
           for (const job of finishedJobs) {
-            if (job.status !== "Success") {
+            if (job.status !== "success") {
               payload.embeds[0].fields.push({
                 name: job.name,
                 value: `[\`${job.status}\`](${job.url})`,
@@ -123,7 +142,6 @@ async function run(): Promise<void> {
         }
 
         notify(discordWebhook, payload)
-
       })
       .catch(error => {
         core.setFailed(error.message)
