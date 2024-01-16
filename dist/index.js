@@ -91,23 +91,20 @@ function run() {
             core.setFailed("Unable to locate the current run id... Something is very wrong");
             return;
         }
+        const strict = core.getBooleanInput("strict");
+        const discordWebhook = core
+            .getInput("discord-webhook", { required: false })
+            .trim();
+        if (!discordWebhook) {
+            core.warning("`discord-webhook` is empty");
+            if (strict) {
+                core.setFailed("`discord-webhook` is missing or empty");
+            }
+        }
         try {
             const githubToken = core
                 .getInput("github-token", { required: true })
                 .trim();
-            const discordWebhook = core
-                .getInput("discord-webhook", { required: true })
-                .trim();
-            const strict = core.getBooleanInput("strict");
-            if (!githubToken) {
-                core.warning("`github-token` is empty");
-            }
-            if (!discordWebhook) {
-                core.warning("`discord-webhook` is empty");
-            }
-            if (strict && (!githubToken || !discordWebhook)) {
-                core.setFailed("one or more required variables are empty");
-            }
             const username = core.getInput("username");
             const avatarURL = core.getInput("avatar-url");
             const colors = {
