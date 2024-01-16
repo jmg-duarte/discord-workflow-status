@@ -14,15 +14,15 @@
 | `username`        | Overrides the current username of the webhook                           |          | GitHub Actions                                                                                                                    |
 | `avatar-url`      | Overrides the current avatar of the webhook                             |          | [Avatar]("https://github.com/jmg-duarte/discord-workflow-status/blob/f303b155a2868ed6b32d42b8b27895ccf05fd438/static/avatar.jpg") |
 
-> <a name="1">[1]</a> `strict` was added to ease forking repositories depending on this action
-> as the webhook should be a secret (which, unless you add it, will not be available in forks).
-> If `strict` is false, the action will _not_ fail in the absence of `discord-webhook` and instead return a "success" status.
-> Once GitHub adds full support for [`core.setNeutral`](https://github.com/actions/toolkit/tree/main/packages/core#exit-codes),
-> instead of resulting in "success" (which fails to properly describe the action result),
-> this action should result in "neutral" (or whatever name they decide for it).
->
-> <a name="2">[2]</a> The GitHub token is required because this action reads the current workflow's jobs.
-> See [`octokit.actions.listJobsForWorkflowRun`](https://octokit.github.io/rest.js/v19#actions-list-jobs-for-workflow-run) for more information.
+<a name="1">[1]</a> `strict` was added to ease forking repositories depending on this action
+as the webhook should be a secret (which, unless you add it, will not be available in forks).
+If `strict` is false, the action will _not_ fail in the absence of `discord-webhook` and instead return a "success" status.
+Once GitHub adds full support for [`core.setNeutral`](https://github.com/actions/toolkit/tree/main/packages/core#exit-codes),
+instead of resulting in "success" (which fails to properly describe the action result),
+this action should result in "neutral" (or whatever name they decide for it).
+
+<a name="2">[2]</a> The GitHub token is required because this action reads the current workflow's jobs.
+See [`octokit.actions.listJobsForWorkflowRun`](https://octokit.github.io/rest.js/v19#actions-list-jobs-for-workflow-run) for more information.
 
 ## Example
 
