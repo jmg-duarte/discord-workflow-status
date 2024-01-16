@@ -100,6 +100,7 @@ function run() {
             if (strict) {
                 core.setFailed("`discord-webhook` is missing or empty");
             }
+            return;
         }
         try {
             const githubToken = core
