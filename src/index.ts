@@ -73,6 +73,7 @@ async function run(): Promise<void> {
     if (strict) {
       core.setFailed("`discord-webhook` is missing or empty");
     }
+    return;
   }
 
   try {
