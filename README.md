@@ -12,7 +12,7 @@
 | `github-token`    | GitHub Token [[2]](#2)                                                  | ✅       |                                                                                                                                   |
 | `discord-webhook` | Discord Webhook URL                                                     |          | `""` (an empty string)                                                                                                            |
 | `username`        | Overrides the current username of the webhook                           |          | GitHub Actions                                                                                                                    |
-| `avatar-url`      | Overrides the current avatar of the webhook                             |          | [Avatar](https://avatars0.githubusercontent.com/u/44036562?s=200&v=4) |
+| `avatar-url`      | Overrides the current avatar of the webhook                             |          | [Avatar](https://raw.githubusercontent.com/jmg-duarte/discord-workflow-status/f303b155a2868ed6b32d42b8b27895ccf05fd438/static/avatar.jpg) |
 
 <a name="1">[1]</a> `strict` was added to ease forking repositories depending on this action
 as the webhook should be a secret (which, unless you add it, will not be available in forks).
