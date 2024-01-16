@@ -1,26 +1,28 @@
-import * as https from "https"
+import * as https from "https";
 
-import * as core from '@actions/core'
-import * as GitHub from '@actions/github'
-import { WebhookPayload } from "@actions/github/lib/interfaces"
+import * as core from "@actions/core";
+import * as GitHub from "@actions/github";
+import { WebhookPayload } from "@actions/github/lib/interfaces";
 
 type JobData = {
-  name: string
-  status: string | null
-  url: string
-}
+  name: string;
+  status: string | null;
+  url: string;
+};
 
-const { GITHUB_RUN_ID, GITHUB_WORKFLOW } = process.env
+const { GITHUB_RUN_ID, GITHUB_WORKFLOW } = process.env;
 
-function workflowStatusFromJobs(jobs: JobData[]): 'Success' | 'Failure' | 'Cancelled' {
+function workflowStatusFromJobs(
+  jobs: JobData[]
+): "Success" | "Failure" | "Cancelled" {
   for (let job of jobs) {
     if (job.status === "cancelled") {
-      return "Cancelled"
+      return "Cancelled";
     } else if (job.status === "failure") {
-      return "Failure"
+      return "Failure";
     }
   }
-  return "Success"
+  return "Success";
 }
 
 // FIXME: the payload type is wrong, it should be something like WebhookWithEmbed
@@ -28,68 +30,92 @@ function notify(webhook: string, payload: object) {
   const request = https.request(webhook, {
     method: "POST",
     headers: {
-      "Content-Type": "application/json"
-    }
-  })
-  request.write(JSON.stringify(payload))
-  request.end()
+      "Content-Type": "application/json",
+    },
+  });
+  request.write(JSON.stringify(payload));
+  request.end();
 }
 
 function getBody(payload: WebhookPayload) {
   // NOTE: The title property is "stolen" from the actual JSON, it's not actually part of the type
   if (payload.hasOwnProperty("pull_request")) {
-    const title = payload.pull_request?.title
-    const number = payload.pull_request?.number
-    const url = payload.pull_request?.html_url
-    return `[${title} (${number})](${url})`
+    const title = payload.pull_request?.title;
+    const number = payload.pull_request?.number;
+    const url = payload.pull_request?.html_url;
+    return `[${title} (${number})](${url})`;
   } else if (payload.hasOwnProperty("issue")) {
-    const title = payload.issue?.title
-    const number = payload.issue?.number
-    const url = payload.issue?.html_url
-    return `[${title} (${number})](${url})`
+    const title = payload.issue?.title;
+    const number = payload.issue?.number;
+    const url = payload.issue?.html_url;
+    return `[${title} (${number})](${url})`;
   } else {
     // FIXME: figure out if we should support this case
-    return ""
+    return "";
   }
 }
 
 async function run(): Promise<void> {
   if (GITHUB_RUN_ID == undefined) {
-    core.setFailed('Unable to locate the current run id... Something is very wrong')
-    return
+    core.setFailed(
+      "Unable to locate the current run id... Something is very wrong"
+    );
+    return;
   }
 
   try {
-    const githubToken = core.getInput('github-token', { required: true })
-    const discordWebhook = core.getInput('discord-webhook', { required: true })
-    const username = core.getInput('username')
-    const avatarURL = core.getInput('avatar-url')
+    const githubToken: string = core
+      .getInput("github-token", { required: true })
+      .trim();
+    const discordWebhook: string = core
+      .getInput("discord-webhook", { required: true })
+      .trim();
+    const strict: boolean = core.getBooleanInput("strict");
 
-    const colors = {
-      "Success": 0x17cf48,
-      "Cancelled": 0xd3d3d3,
-      "Failure": 0xe72727
+    if (!githubToken) {
+      core.warning("`github-token` is empty");
+    }
+    if (!discordWebhook) {
+      core.warning("`discord-webhook` is empty");
+    }
+    if (strict && (!githubToken || !discordWebhook)) {
+      core.setFailed("one or more required variables are empty");
     }
 
-    core.setSecret(githubToken)
-    core.setSecret(discordWebhook)
+    const username = core.getInput("username");
+    const avatarURL = core.getInput("avatar-url");
 
-    const octokit = GitHub.getOctokit(githubToken)
-    const context = GitHub.context
+    const colors = {
+      Success: 0x17cf48,
+      Cancelled: 0xd3d3d3,
+      Failure: 0xe72727,
+    };
 
-    octokit.actions.listJobsForWorkflowRun({
-      owner: context.repo.owner,
-      repo: context.repo.repo,
-      run_id: parseInt(GITHUB_RUN_ID, 10)
-    })
-      .then(response => {
-        let finishedJobs = []
+    core.setSecret(githubToken);
+    core.setSecret(discordWebhook);
+
+    const octokit = GitHub.getOctokit(githubToken);
+    const context = GitHub.context;
+
+    octokit.actions
+      .listJobsForWorkflowRun({
+        owner: context.repo.owner,
+        repo: context.repo.repo,
+        run_id: parseInt(GITHUB_RUN_ID, 10),
+      })
+      // FIXME: add typing
+      .then((response) => {
+        let finishedJobs = [];
         for (const job of response.data.jobs) {
           if (job.status === "completed") {
-            finishedJobs.push({ name: job.name, status: job.conclusion, url: job.html_url })
+            finishedJobs.push({
+              name: job.name,
+              status: job.conclusion,
+              url: job.html_url,
+            });
           }
         }
-        let workflowStatus = workflowStatusFromJobs(finishedJobs)
+        let workflowStatus = workflowStatusFromJobs(finishedJobs);
 
         // FIXME: the payload is untyped because I removed the existing typing
         // it was unnecessarily complex
@@ -102,7 +128,7 @@ async function run(): Promise<void> {
               author: {
                 name: context.actor,
                 url: `https://github.com/${context.actor}`,
-                icon_url: `https://github.com/${context.actor}.png`
+                icon_url: `https://github.com/${context.actor}.png`,
               },
               color: colors[workflowStatus],
               title: `${GITHUB_WORKFLOW} - ${workflowStatus}`,
@@ -112,22 +138,22 @@ async function run(): Promise<void> {
                 {
                   name: "Repository",
                   value: `[${context.repo.owner}/${context.repo.repo}](https://github.com/${context.repo.owner}/${context.repo.repo})`,
-                  inline: true
+                  inline: true,
                 },
                 {
                   name: "Reference",
                   value: context.ref,
-                  inline: true
+                  inline: true,
                 },
                 {
                   name: "Commit",
                   value: context.sha.substring(0, 8),
-                  inline: true
-                }
-              ]
-            }
-          ]
-        }
+                  inline: true,
+                },
+              ],
+            },
+          ],
+        };
 
         if (workflowStatus !== "Success") {
           for (const job of finishedJobs) {
@@ -135,22 +161,21 @@ async function run(): Promise<void> {
               payload.embeds[0].fields.push({
                 name: job.name,
                 value: `[\`${job.status}\`](${job.url})`,
-                inline: false
-              })
+                inline: false,
+              });
             }
           }
         }
 
-        notify(discordWebhook, payload)
+        notify(discordWebhook, payload);
       })
-      .catch(error => {
-        core.setFailed(error.message)
-      })
-
+      // FIXME: add typing
+      .catch((error) => {
+        core.setFailed(error.message);
+      });
   } catch (error) {
-    core.setFailed((error as any).message)
+    core.setFailed((error as any).message);
   }
-
 }
 
-run()
+run();

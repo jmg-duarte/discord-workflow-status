@@ -1,30 +1,35 @@
-name: 'Discord Workflow Status Action'
-description: 'GitHub Action to notify Discord of workflow statuses'
-author: 'José Duarte'
+name: "Discord Workflow Status Action"
+description: "GitHub Action to notify Discord of workflow statuses"
+author: "José Duarte"
 
 inputs:
+  strict:
+    description: "If the action should fail in the absence of a Github Token or Discord Webhook."
+    required: false
+    default: true
+
   github-token:
-    description: 'GitHub Token'
+    description: "GitHub Token"
     required: true
 
   discord-webhook:
-    description: 'Discord Webhook URL'
+    description: "Discord Webhook URL"
     required: true
 
   username:
-    description: 'Overrides the current username of the webhook'
+    description: "Overrides the current username of the webhook"
     required: false
-    default: 'GitHub Actions'
+    default: "GitHub Actions"
 
   avatar-url:
-    description: 'Overrides the current avatar of the webhook'
+    description: "Overrides the current avatar of the webhook"
     required: false
-    default: 'https://avatars0.githubusercontent.com/u/44036562?s=200&v=4'
+    default: "https://avatars0.githubusercontent.com/u/44036562?s=200&v=4"
 
 runs:
-  using: 'node16'
-  main: 'dist/index.js'
+  using: "node16"
+  main: "dist/index.js"
 
 branding:
-  icon: 'message-square'
-  color: 'gray-dark'
+  icon: "message-square"
+  color: "gray-dark"
