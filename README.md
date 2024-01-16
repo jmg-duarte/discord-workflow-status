@@ -1,8 +1,8 @@
-<img align="left" src="static/avatar.jpg" width=100/>
-
-# Discord Workflow Status Action
-
-Notify Discord of workflow statuses 🤖
+<div>
+  <img align="left" src="static/avatar.jpg" width=100/>
+  <h1>Discord Workflow Status Action</h1>
+  <h4>Notify Discord of workflow statuses 🤖</h4>
+</div>
 
 ## Inputs
 
