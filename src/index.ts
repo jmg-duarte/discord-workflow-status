@@ -63,24 +63,22 @@ async function run(): Promise<void> {
     return;
   }
 
+  const strict: boolean = core.getBooleanInput("strict");
+  const discordWebhook: string = core
+    .getInput("discord-webhook", { required: false })
+    .trim();
+
+  if (!discordWebhook) {
+    core.warning("`discord-webhook` is empty");
+    if (strict) {
+      core.setFailed("`discord-webhook` is missing or empty");
+    }
+  }
+
   try {
     const githubToken: string = core
       .getInput("github-token", { required: true })
       .trim();
-    const discordWebhook: string = core
-      .getInput("discord-webhook", { required: true })
-      .trim();
-    const strict: boolean = core.getBooleanInput("strict");
-
-    if (!githubToken) {
-      core.warning("`github-token` is empty");
-    }
-    if (!discordWebhook) {
-      core.warning("`discord-webhook` is empty");
-    }
-    if (strict && (!githubToken || !discordWebhook)) {
-      core.setFailed("one or more required variables are empty");
-    }
 
     const username = core.getInput("username");
     const avatarURL = core.getInput("avatar-url");

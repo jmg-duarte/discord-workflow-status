@@ -4,7 +4,9 @@ author: "José Duarte"
 
 inputs:
   strict:
-    description: "If the action should fail in the absence of a Github Token or Discord Webhook."
+    description: >
+      Whether the action should fail or be successful when missing `discord-webhook`.
+      This is useful to allow forks to run an actions suite.
     required: false
     default: true
 
@@ -14,7 +16,8 @@ inputs:
 
   discord-webhook:
     description: "Discord Webhook URL"
-    required: true
+    required: false
+    default: ""
 
   username:
     description: "Overrides the current username of the webhook"
@@ -24,10 +27,10 @@ inputs:
   avatar-url:
     description: "Overrides the current avatar of the webhook"
     required: false
-    default: "https://avatars0.githubusercontent.com/u/44036562?s=200&v=4"
+    default: "https://github.com/jmg-duarte/discord-workflow-status/blob/f303b155a2868ed6b32d42b8b27895ccf05fd438/static/avatar.jpg"
 
 runs:
-  using: "node16"
+  using: "node20"
   main: "dist/index.js"
 
 branding:
