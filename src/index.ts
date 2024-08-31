@@ -12,6 +12,21 @@ type JobData = {
 
 const { GITHUB_RUN_ID, GITHUB_WORKFLOW } = process.env;
 
+function formatTime(seconds: number): string {
+  if (seconds < 60) {
+    return `${seconds} seconds`;
+  } else if (seconds < 3600) {
+    let minutes = Math.floor(seconds / 60);
+    let s = seconds % 60;
+    return `${minutes} minutes, ${s} seconds`;
+  }
+  let hours = Math.floor(seconds / 3600);
+  seconds -= hours * 3600;
+  let minutes = Math.floor(seconds / 60);
+  let s = seconds % 60;
+  return `${hours} hours, ${minutes} minutes & ${s} seconds`;
+}
+
 function workflowStatusFromJobs(
   jobs: JobData[]
 ): "Success" | "Failure" | "Cancelled" {
@@ -111,6 +126,9 @@ async function run(): Promise<void> {
               name: job.name,
               status: job.conclusion,
               url: job.html_url,
+              timeTaken:
+                (Date.parse(job.completed_at) - Date.parse(job.started_at)) /
+                1000,
             });
           }
         }
@@ -149,6 +167,12 @@ async function run(): Promise<void> {
                   value: context.sha.substring(0, 8),
                   inline: true,
                 },
+                {
+                  name: "Total Time",
+                  value: formatTime(finishedJobs
+                    .reduce((acc, curr) => acc + curr.timeTaken, 0)),
+                  inline: false
+                }
               ],
             },
           ],
@@ -157,9 +181,10 @@ async function run(): Promise<void> {
         if (workflowStatus !== "Success") {
           for (const job of finishedJobs) {
             if (job.status !== "success") {
+              const jobTime = formatTime(job.timeTaken)
               payload.embeds[0].fields.push({
                 name: job.name,
-                value: `[\`${job.status}\`](${job.url})`,
+                value: `[\`${job.status}\`](${job.url}) took ${jobTime} seconds`,
                 inline: false,
               });
             }
