@@ -55,6 +55,23 @@ function getBody(payload: WebhookPayload) {
   }
 }
 
+function formatDuration(timeCompleted: string, timeStarted: string) {
+  let durationMs = new Date(timeCompleted).getTime() - new Date(timeStarted).getTime();
+  let seconds = Math.floor((durationMs / 1000) % 60);
+  let minutes = Math.floor((durationMs / (1000 * 60)) % 60);
+  let hours = Math.floor((durationMs / (1000 * 60 * 60)) % 24);
+  let formattedDuration = '';
+  if (hours > 0) {
+    formattedDuration += `${hours}h `;
+  }
+  if (minutes > 0) {
+    formattedDuration += `${minutes}m `;
+  }
+  formattedDuration += `${seconds}s`;
+
+  return formattedDuration.trim();
+}
+
 async function run(): Promise<void> {
   if (GITHUB_RUN_ID == undefined) {
     core.setFailed(
@@ -111,6 +128,7 @@ async function run(): Promise<void> {
               name: job.name,
               status: job.conclusion,
               url: job.html_url,
+              duration: formatDuration(job.completed_at, job.started_at),
             });
           }
         }
@@ -159,7 +177,7 @@ async function run(): Promise<void> {
             if (job.status !== "success") {
               payload.embeds[0].fields.push({
                 name: job.name,
-                value: `[\`${job.status}\`](${job.url})`,
+                value: `[\`${job.status}\`](${job.url}) - ${job.duration}`,
                 inline: false,
               });
             }
