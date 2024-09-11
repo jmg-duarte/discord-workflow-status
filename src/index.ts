@@ -56,10 +56,10 @@ function getBody(payload: WebhookPayload) {
 }
 
 function formatDuration(timeCompleted: string, timeStarted: string) {
-  let durationMs = new Date(timeCompleted).getTime() - new Date(timeStarted).getTime();
+  let durationMs = Date.parse(timeCompleted) - Date.parse(timeStarted);
   let seconds = Math.floor((durationMs / 1000) % 60);
   let minutes = Math.floor((durationMs / (1000 * 60)) % 60);
-  let hours = Math.floor((durationMs / (1000 * 60 * 60)) % 24);
+  let hours = Math.floor((durationMs / (1000 * 60 * 60)));
   let formattedDuration = '';
   if (hours > 0) {
     formattedDuration += `${hours}h `;
